@@ -1,6 +1,5 @@
 // Есть 2 сервера на которых лежат скидочные карты. Нужно получить эти данные и вывести в единый список.
 
-
 /*
 Что сделал:
 - Создал два моковых серверных запроса.
@@ -50,9 +49,20 @@ class Task3_5Activity : AppCompatActivity() {
     }
 
     private fun loadDiscountCards() {
-        val disposable = Single.zip(
-            getCardsFromFirstServer(),
-            getCardsFromSecondServer()
+        // a)  Если 1 из запросов падает, то все равно выводить
+        val disposableA = Single.zip(    
+            getCardsFromFirstServer().onErrorReturnItem(emptyList()),  
+            getCardsFromSecondServer().onErrorReturnItem(emptyList())
+        ) { firstServerCards, secondServerCards ->
+
+            (firstServerCards + secondServerCards)
+                .distinctBy { card -> card.id }
+        }
+        
+        // б) Если 1 из запросов падает, то не выводить ничего (реализовано)
+        val disposableB = Single.zip(    
+            getCardsFromFirstServer(),  // getCardsFromFirstServer() - a)  Если 1 из запросов падает, то все равно выводить
+            getCardsFromSecondServer()  // getCardsFromFirstServer().onErrorReturnItem(emptyList()) - a)  Если 1 из запросов падает, то все равно выводить
         ) { firstServerCards, secondServerCards ->
 
             (firstServerCards + secondServerCards)
@@ -74,7 +84,7 @@ class Task3_5Activity : AppCompatActivity() {
                 }
             )
 
-        compositeDisposable.add(disposable)
+        compositeDisposable.add(disposableB)
     }
 
     private fun getCardsFromFirstServer(): Single<List<DiscountCard>> {
